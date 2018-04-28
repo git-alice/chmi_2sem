@@ -1,24 +1,3 @@
-main.c
-O
-Тип
-С
-Размер
-5 КБ (5 073 байта)
-Использовано
-5 КБ (5 073 байта)
-Расположение
-chmi_2sem
-Владелец
-я
-Изменено
-мной 15:06
-Открыто
-мной 18:13
-Создано
-15:06 в приложении ZIP Extractor
-Добавить описание
-Читателям разрешено скачивать файл
-
 #include "stdio.h"
 #include <stdlib.h>
 #include "math.h"
@@ -46,7 +25,8 @@ double x_by_stepx(int step){
 }
 
 void print_block(double * block, int length){
-    for (int i = 0; i < length; ++i)
+    int i;
+    for (i = 0; i < length; ++i)
     {
         printf("%-4.5g ", block[i]);
     }
@@ -80,8 +60,9 @@ void norma_l(double v_n_m, double * norma){
 
 void print_matrix(double * matrix, int length){
     printf("\nMATRIX PRINT\n");
-    for (int i = 0; i < length; i++)
-        for (int j = 0; j < length; j++){
+    int i,j;
+    for (i = 0; i < length; i++)
+        for (j = 0; j < length; j++){
             printf("%-4.5g ", *(matrix + i*length + j));
     }
     printf("\n");
@@ -89,7 +70,8 @@ void print_matrix(double * matrix, int length){
 
 
 void print_block_to_file(double * block, int length, FILE * fout){
-    for (int i = 0; i < length; ++i)
+    int i;
+    for (i = 0; i < length; ++i)
     {
         fprintf(fout, "%-8g ", block[i]);
     }
@@ -97,7 +79,8 @@ void print_block_to_file(double * block, int length, FILE * fout){
 }
 
 void begin_value(double * block, int length){
-    for (int i = 0; i < length; ++i)
+    int i;
+    for (i = 0; i < length; ++i)
     {
         if (x_by_stepx(i) <= 0)
             block[i] = 1.0;
@@ -111,18 +94,23 @@ void characteristic(double * block){
     block[m-1] = 0;
 }
 
+void characteristic_for_b(double * b){
+    b[0] = 1-tao/(4*h);
+    b[m-1] = 0.0;
+}
+
 void next_block(double * block, int length, double step_by_t,
     double * norma_DELTA_c_line, double * norma_delta_c_line, //[c]
     double * norma_DELTA_l_line, double * norma_delta_l_line  //[l]
     ){
-
+    int i;
     double x = x_begin;
     double del;
     *norma_DELTA_c_line = 0; *norma_delta_c_line = 0; //начальное максимальное значение [c]
     *norma_DELTA_l_line = 0; *norma_delta_l_line = 0; //начальное значение [l]
 
     characteristic(block);
-    for (int i = 0; i < m-1; ++i)
+    for (i = 0; i < m-1; ++i)
     {
         block[i] = V_nplus1_m(block[i+1], block[i]);
 
@@ -139,8 +127,102 @@ void next_block(double * block, int length, double step_by_t,
 
 }
 
+void matrix_b(double * b){
+    int i;
+    characteristic_for_b(b);
+    printf("b[%d]: %f\n", 0,b[0]);
+    for (i = 1; i < m-1; i++)
+    {
+        if (x_by_stepx(i) <= 0)
+            b[i] = 1.0;
+        else
+            b[i] = 0.0;
+            printf("b[%d]: %f\n", i,b[i]);
+    }
+    printf("b[%d]: %f\n", m-1,b[m-1]);
+}
+
+void matrix_A(double A[m][m]){
+
+    int i,j;
+    for (i=0; i<m; i++){
+        for (j=0; j<m; j++){
+            if (i==j) A[i][j] = 1;
+                else if (i==j-1) A[i][j] = (tao/(4*h));
+                    else if (i==j+1) A[i][j] = (-tao/(4*h));
+                        else A[i][j] = 0;
+            //printf("%-7.2f  ", A[i][j]);
+        }
+        //printf("\n");
+    }
+}
+
+/*void matrix_U(double A[m][m], double U_1[m], double U_2[m-1], double b[m]){
+    int i,j;
+    double l=0;   // начальное l
+    for (i=0; i<m; i++){
+        if (i==0) { //вырожденный случай
+            U_1[i] = A[i][i];
+            U_2[i] = A[i][i+1];
+            b[i] = b[i];
+            l = A[i+1][i]/U_1[i];
+        } else if (i!=m-1) {
+            U_1[i] = A[i][i] - l*U_2[i-1];
+            U_2[i] = A[i][i+1];
+            b[i] = b[i] - l*b[i-1];
+            l = A[i+1][i]/U_1[i];
+        } else {
+            U_1[i] = A[i][i] - l*U_2[i-1];
+            b[i] = b[i] - l*b[i-1];
+        }
+
+    }
+}*/
+void matrix_U(double A[m][m], double U_1[m], double U_2[m-1], double b[m]){
+    int i,j;
+    double l=0;   // начальное l
+    for (i=0; i<m; i++){
+        if (i==0) { //вырожденный случай
+            U_1[i] = 1;
+            U_2[i] = -tao/(4*h);
+            b[i] = b[i];
+            l = (tao/(4*h))/U_1[i];
+        } else if (i!=m-1) {
+            U_1[i] = 1 - l*U_2[i-1];
+            U_2[i] = -tao/(4*h);
+            b[i] = b[i] - l*b[i-1];
+            l = (tao/(4*h))/U_1[i];
+        } else {
+            U_1[i] = 1 - l*U_2[i-1];
+            b[i] = b[i] - l*b[i-1];
+        }
+
+    }
+}
+
+void matrix_V_hat(double U_1[m], double U_2[m-1], double b[m], double V_hat[m]){
+    int i;
+
+    for(i=m-1; i>=0; i--){
+        if (i==m-1) V_hat[i] = b[i]/U_1[i];
+        else {
+            V_hat[i] = (b[i] - U_2[i]*V_hat[i+1])/U_1[i];
+        }
+        printf("V_hat[%d]: %g\n", i,V_hat[i]);
+    }
+}
+
+void equal(double b[m], double V_hat[m]){
+    int i;
+    b[0] = V_hat[0]-tao/(4*h);
+    for(i=1; i<m; i++){
+        b[i] = V_hat[i];
+    }
+}
+
 void main_loop_lin_simple(){
     // double previous_block[m];
+    int i;
     double block[m];
     double norma_DELTA_c = 0; double norma_delta_c = 0;   //по всей сетке [c]
     double norma_DELTA_c_line; double norma_delta_c_line; //по линиям
@@ -151,15 +233,13 @@ void main_loop_lin_simple(){
     int length = (int)(sizeof(block)/sizeof(double));
     begin_value(block, length);
 
-    for (int i = 0; i < n; ++i){
+    for (i = 0; i < n; ++i){
         next_block(block, length, i, &norma_DELTA_c_line, &norma_delta_c_line, &norma_DELTA_l_line, &norma_delta_l_line);
         norma_c(norma_DELTA_c_line, &norma_DELTA_c);
         norma_c(norma_delta_c_line, &norma_delta_c);
         norma_l(norma_DELTA_l_line, &norma_DELTA_l);
         norma_l(norma_delta_l_line, &norma_delta_l);
-        // printf("NORMA_delta_l %g\n", norma_delta_l_line);
 
-        // print_block(block, length);
         print_block_to_file(block, length, fout);
 
     }
@@ -174,7 +254,7 @@ void main_loop_lin_simple(){
 
 /////////////////////
 void main_loop_lin_dif(){
-
+    int i,k;
     double * matrix; // указатель на массив
     matrix = (double *)malloc(m*m * sizeof(double));
 
@@ -182,8 +262,8 @@ void main_loop_lin_dif(){
 
     int length = (int)(sizeof(matrix)/sizeof(double));
     // print("length %g", )
-    for (int i = 0; i < length; i++)
-        for (int k = 0; k <= 2; k++)
+    for (i = 0; i < length; i++)
+        for (k = 0; k <= 2; k++)
             if ((i+k) < m) {
                 *(matrix + i*m + k) = (double)(rand() % 10);
                 // printf();
@@ -206,8 +286,21 @@ void main_loop_lin_dif(){
 ///////////////////////
 
 int main(){
-    printf("%d x %d\n", m,n);
-    main_loop_lin_simple();
+    printf("Size: %d x %d\n", m,n);
+
+    int i;
+    double A[m][m]; double U_1[m]; double U_2[m-1]; double b[m]; double V_hat[m];
+    //main_loop_lin_simple();
     // main_loop_lin_dif();
+
+    matrix_b(&b);
+    for(i=0; i<n; i++){
+        printf("\nTao: %f, Step %d\n\n", t_by_stept(i), i);
+        matrix_A(&A);
+        matrix_U(&A, &U_1, &U_2, &b);
+        matrix_V_hat(&U_1, &U_2, &b, &V_hat);
+        equal(&b, &V_hat);
+    }
+
     return 0;
 }
